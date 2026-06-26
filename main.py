@@ -4,7 +4,7 @@ app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"message": "Azure Devops + Docker + Kubernetes"}
+    return {"message": "Hello from FastAPI - Auto Trigger Test!"}
 
 @app.get("/health")
 def health():
