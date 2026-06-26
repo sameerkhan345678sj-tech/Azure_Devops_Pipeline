@@ -1,0 +1,42 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  dockerRegistryServiceConnection: 'dockerHubConnection'
+  dockerHubUser: 'sameerkamran'
+  imageRepository: 'myapp'
+  tag: '$(Build.BuildId)'
+  fullImageName: '$(dockerHubUser)/$(imageRepository)'
+
+stages:
+- stage: Build
+  displayName: Build, scan and push image
+  jobs:
+  - job: BuildJob
+    displayName: Build job
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - checkout: self
+
+      - task: Docker@2
+        displayName: Log in to Docker Hub
+        inputs:
+          command: login
+          containerRegistry: $(dockerRegistryServiceConnection)
+
+      - bash: |
+          docker build -t $(fullImageName):$(tag) -t $(fullImageName):latest -f Dockerfile .
+        displayName: Build image
+
+      - bash: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+          trivy image --exit-code 0 --severity HIGH,CRITICAL --ignore-unfixed $(fullImageName):$(tag)
+        displayName: Scan image with Trivy
+
+      - bash: |
+          docker push $(fullImageName):$(tag)
+          docker push $(fullImageName):latest
+        displayName: Push image
